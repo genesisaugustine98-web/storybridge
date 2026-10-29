@@ -1,0 +1,177 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Inter:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 38 38% 97%;
+    --foreground: 156 14% 13%;
+    --card: 40 44% 99%;
+    --card-foreground: 156 14% 13%;
+    --popover: 40 44% 99%;
+    --popover-foreground: 156 14% 13%;
+    --primary: 158 34% 21%;
+    --primary-foreground: 40 44% 98%;
+    --secondary: 40 30% 92%;
+    --secondary-foreground: 156 14% 18%;
+    --muted: 40 26% 94%;
+    --muted-foreground: 156 8% 38%;
+    --accent: 30 68% 42%;
+    --accent-foreground: 40 44% 98%;
+    --destructive: 4 62% 45%;
+    --destructive-foreground: 40 44% 98%;
+    --border: 38 18% 86%;
+    --input: 38 18% 84%;
+    --ring: 158 34% 21%;
+    --chart-1: 158 34% 30%;
+    --chart-2: 30 68% 50%;
+    --chart-3: 200 30% 40%;
+    --chart-4: 45 60% 55%;
+    --chart-5: 340 40% 55%;
+    --radius: 0.75rem;
+    --font-heading: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --sidebar-background: 40 30% 96%;
+    --sidebar-foreground: 156 14% 20%;
+    --sidebar-primary: 158 34% 21%;
+    --sidebar-primary-foreground: 40 44% 98%;
+    --sidebar-accent: 40 26% 92%;
+    --sidebar-accent-foreground: 156 14% 18%;
+    --sidebar-border: 38 18% 86%;
+    --sidebar-ring: 158 34% 21%;
+  }
+
+  .dark {
+    --background: 156 14% 10%;
+    --foreground: 40 30% 94%;
+    --card: 156 14% 13%;
+    --card-foreground: 40 30% 94%;
+    --popover: 156 14% 13%;
+    --popover-foreground: 40 30% 94%;
+    --primary: 40 40% 92%;
+    --primary-foreground: 156 14% 13%;
+    --secondary: 156 12% 18%;
+    --secondary-foreground: 40 30% 94%;
+    --muted: 156 12% 18%;
+    --muted-foreground: 40 12% 66%;
+    --accent: 30 68% 55%;
+    --accent-foreground: 156 14% 10%;
+    --destructive: 4 62% 50%;
+    --destructive-foreground: 40 30% 96%;
+    --border: 156 10% 22%;
+    --input: 156 10% 24%;
+    --ring: 40 40% 80%;
+    --sidebar-background: 156 14% 12%;
+    --sidebar-foreground: 40 30% 92%;
+    --sidebar-primary: 40 40% 92%;
+    --sidebar-primary-foreground: 156 14% 13%;
+    --sidebar-accent: 156 12% 18%;
+    --sidebar-accent-foreground: 40 30% 92%;
+    --sidebar-border: 156 10% 22%;
+    --sidebar-ring: 40 40% 80%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+    background-image:
+      radial-gradient(1200px 600px at 12% -8%, hsl(38 45% 94% / 0.9), transparent 60%),
+      radial-gradient(900px 520px at 92% 4%, hsl(150 22% 93% / 0.7), transparent 62%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-heading;
+    font-variation-settings: 'SOFT' 0, 'WONK' 0;
+    letter-spacing: -0.015em;
+  }
+
+  ::selection {
+    background: hsl(30 68% 42% / 0.22);
+  }
+}
+
+@layer utilities {
+  .label-caps {
+    @apply text-[10.5px] font-medium uppercase tracking-[0.2em] text-muted-foreground;
+  }
+  .hairline {
+    @apply border-t border-border/70;
+  }
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+  .card-soft {
+    @apply rounded-2xl border border-border/80 bg-card/90 shadow-[0_1px_2px_hsl(156_14%_13%/0.04),0_12px_32px_-24px_hsl(156_14%_13%/0.25)];
+  }
+  .rise-in {
+    animation: rise-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- printable handout ---------- */
+
+@media print {
+  @page {
+    margin: 16mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    background-image: none !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: none;
+    border: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+
+  .print-avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
