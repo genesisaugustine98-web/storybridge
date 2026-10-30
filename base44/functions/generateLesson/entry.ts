@@ -69,6 +69,7 @@ export default async function (req) {
     const evidence = cleanEvidence(payload.evidence);
     const demo = payload.demo === true || evidence.mode === 'demo';
     const anchors = cleanAnchors(payload.anchors && payload.anchors.length ? payload.anchors : evidence.anchors);
+    const curriculumOnly = !demo && evidence.mode === 'curriculum';
 
     if (brief.objective.length < 8) {
       return Response.json({ error: 'A learning objective of at least 8 characters is required.' }, { status: 400 });
@@ -77,8 +78,8 @@ export default async function (req) {
     if (demo && !anchors.length) {
       return Response.json({ error: 'Demo mode needs at least one teacher-entered reference.' }, { status: 400 });
     }
-    if (!demo && !evidence.candidates.length) {
-      return Response.json({ error: 'No Qloo candidates were supplied, so no Qloo-informed lesson can be grounded.' }, { status: 400 });
+    if (!demo && !curriculumOnly && !evidence.candidates.length) {
+      return Response.json({ error: 'No Qloo candidates were supplied. Continue with your own references without Qloo, or remove the anchors to build a curriculum-only lesson.' }, { status: 400 });
     }
 
     const base44 = createClientFromRequest(req);
@@ -87,42 +88,62 @@ export default async function (req) {
       ? demoPrompt(brief, anchors)
       : informedPrompt(brief, evidence);
 
-    const [baselineRes, informedRes] = await Promise.all([
-      base44.asServiceRole.integrations.Core.InvokeLLM({
-        prompt: baselinePrompt(brief),
-        response_json_schema: LESSON_SCHEMA,
-        model: 'automatic',
-      }),
-      base44.asServiceRole.integrations.Core.InvokeLLM({
+    const baselineRes = await base44.asServiceRole.integrations.Core.InvokeLLM({
+      prompt: baselinePrompt(brief),
+      response_json_schema: LESSON_SCHEMA,
+      model: 'automatic',
+    });
+    const baseline = normalizeLesson(baselineRes);
+
+    const informedRes = (demo || curriculumOnly)
+      ? null
+      : await base44.asServiceRole.integrations.Core.InvokeLLM({
         prompt: informedText,
         response_json_schema: LESSON_SCHEMA,
         model: 'automatic',
-      }),
-    ]);
+      });
+    const informed = curriculumOnly ? normalizeLesson(baselineRes) : normalizeLesson(informedRes);
 
-    const baseline = normalizeLesson(baselineRes);
-    const informed = normalizeLesson(informedRes);
-
-    const grounded = groundExamples(informed.examples, { ...evidence, anchors }, demo);
+    const grounded = curriculumOnly
+      ? {
+        examples: (informed.examples || []).slice(0, 3).map((example) => ({
+          ...example,
+          source: 'curriculum',
+          evidenceRef: 'curriculum:generic',
+        })),
+        removed: [],
+      }
+      : groundExamples(informed.examples, { ...evidence, anchors }, demo);
     informed.examples = grounded.examples;
 
-    const comparisonRes = await base44.asServiceRole.integrations.Core.InvokeLLM({
-      prompt: comparePrompt(brief, baseline, informed, demo ? 'demo' : 'qloo'),
-      response_json_schema: COMPARE_SCHEMA,
-      model: 'automatic',
-    });
+    const comparisonRes = curriculumOnly
+      ? null
+      : await base44.asServiceRole.integrations.Core.InvokeLLM({
+        prompt: comparePrompt(brief, baseline, informed, 'qloo'),
+        response_json_schema: COMPARE_SCHEMA,
+        model: 'automatic',
+      });
 
-    const comparison = comparisonRes && typeof comparisonRes === 'object'
+    const comparison = curriculumOnly
       ? {
-        summary: String(comparisonRes.summary || ''),
-        changes: Array.isArray(comparisonRes.changes) ? comparisonRes.changes.slice(0, 5) : [],
-        cautions: Array.isArray(comparisonRes.cautions) ? comparisonRes.cautions.slice(0, 3) : [],
+        summary: 'No cultural anchors were supplied, so StoryBridge produced a curriculum-only lesson without making Qloo recommendations.',
+        changes: [
+          { area: 'Cultural examples', baseline: 'Uses neutral curriculum examples.', informed: 'No cultural references were added because none were supplied.' },
+          { area: 'Evidence', baseline: 'Based on the lesson objective and teaching brief.', informed: 'No Qloo entities, affinity scores or recommendations were used.' },
+        ],
+        cautions: ['This is a curriculum-only draft. Add teacher-chosen cultural anchors to request Qloo recommendations.'],
       }
-      : { summary: '', changes: [], cautions: [] };
+      : comparisonRes && typeof comparisonRes === 'object'
+        ? {
+          summary: String(comparisonRes.summary || ''),
+          changes: Array.isArray(comparisonRes.changes) ? comparisonRes.changes.slice(0, 5) : [],
+          cautions: Array.isArray(comparisonRes.cautions) ? comparisonRes.cautions.slice(0, 3) : [],
+        }
+        : { summary: '', changes: [], cautions: [] };
 
     return Response.json({
       brief,
-      mode: demo ? 'demo' : 'qloo',
+      mode: demo ? 'demo' : curriculumOnly ? 'curriculum' : 'qloo',
       baseline: {
         ...baseline,
         examples: (baseline.examples || []).slice(0, 3).map((e) => ({
@@ -138,9 +159,11 @@ export default async function (req) {
       validation: {
         cited: grounded.examples.length,
         removed: grounded.removed,
-        note: grounded.removed.length
-          ? `${grounded.removed.length} cited item(s) were not in the verified result set and were removed.`
-          : 'Every cited example was checked against the verified result set.',
+        note: curriculumOnly
+          ? 'No Qloo recommendations were used. The lesson uses neutral curriculum examples only.'
+          : grounded.removed.length
+            ? `${grounded.removed.length} cited item(s) were not in the verified result set and were removed.`
+            : 'Every cited example was checked against the verified result set.',
       },
       generatedAt: new Date().toISOString(),
     });
