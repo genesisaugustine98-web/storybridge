@@ -37,6 +37,7 @@ function cleanEvidence(input) {
   const evidence = input && typeof input === 'object' ? input : {};
   return {
     mode: typeof evidence.mode === 'string' ? evidence.mode : 'unknown',
+    teacherReviewed: evidence.teacherReviewed === true,
     anchors: Array.isArray(evidence.anchors)
       ? evidence.anchors.slice(0, MAX_ANCHORS).map((a) => ({
         label: String(a && a.label ? a.label : ''),
@@ -70,6 +71,7 @@ export default async function (req) {
     const demo = payload.demo === true || evidence.mode === 'demo';
     const anchors = cleanAnchors(payload.anchors && payload.anchors.length ? payload.anchors : evidence.anchors);
     const curriculumOnly = !demo && evidence.mode === 'curriculum';
+    const qlooApproved = !demo && evidence.mode === 'qloo-approved' && evidence.teacherReviewed === true;
 
     if (!brief.objective.trim()) {
       return Response.json({ error: 'Enter a lesson topic or learning objective before continuing.' }, { status: 400 });
@@ -78,8 +80,8 @@ export default async function (req) {
     if (demo && !anchors.length) {
       return Response.json({ error: 'Demo mode needs at least one teacher-entered reference.' }, { status: 400 });
     }
-    if (!demo && !curriculumOnly && !evidence.candidates.length) {
-      return Response.json({ error: 'No Qloo candidates were supplied. Continue with your own references without Qloo, or remove the anchors to build a curriculum-only lesson.' }, { status: 400 });
+    if (!demo && !curriculumOnly && (!qlooApproved || !evidence.candidates.length)) {
+      return Response.json({ error: 'Qloo results must be explicitly selected and confirmed by the teacher before they can be used in a lesson. Return to the evidence screen and review your selections, or build from your original references without Qloo.' }, { status: 400 });
     }
 
     const base44 = createClientFromRequest(req);
@@ -102,9 +104,9 @@ export default async function (req) {
         response_json_schema: LESSON_SCHEMA,
         model: 'automatic',
       });
-    const informed = curriculumOnly ? normalizeLesson(baselineRes) : normalizeLesson(informedRes);
+    let informed = curriculumOnly ? normalizeLesson(baselineRes) : normalizeLesson(informedRes);
 
-    const grounded = curriculumOnly
+    let grounded = curriculumOnly
       ? {
         examples: (informed.examples || []).slice(0, 3).map((example) => ({
           ...example,
@@ -114,9 +116,28 @@ export default async function (req) {
         removed: [],
       }
       : groundExamples(informed.examples, { ...evidence, anchors }, demo);
-    informed.examples = grounded.examples;
 
-    const comparisonRes = curriculumOnly
+    const qlooActuallyUsed = qlooApproved && grounded.examples.length > 0;
+    const curriculumFallback = curriculumOnly || (!demo && !qlooActuallyUsed);
+
+    // If the model cannot justify a reviewed candidate against the actual
+    // objective, discard the attempted Qloo draft and return the competent
+    // curriculum baseline. Do not label an empty result as Qloo-informed.
+    if (curriculumFallback && !curriculumOnly) {
+      informed = normalizeLesson(baselineRes);
+      grounded = {
+        examples: (informed.examples || []).slice(0, 3).map((example) => ({
+          ...example,
+          source: 'curriculum',
+          evidenceRef: 'curriculum:generic',
+        })),
+        removed: [],
+      };
+    } else {
+      informed.examples = grounded.examples;
+    }
+
+    const comparisonRes = curriculumFallback
       ? null
       : await base44.asServiceRole.integrations.Core.InvokeLLM({
         prompt: comparePrompt(brief, baseline, informed, demo ? 'demo' : 'qloo'),
@@ -124,14 +145,14 @@ export default async function (req) {
         model: 'automatic',
       });
 
-    const comparison = curriculumOnly
+    const comparison = curriculumFallback
       ? {
-        summary: 'No cultural anchors were supplied, so StoryBridge produced a curriculum-only lesson without making Qloo recommendations.',
+        summary: 'The reviewed Qloo discovery results did not yield a classroom example that could be justified against this objective. StoryBridge therefore retained the curriculum-led lesson rather than forcing an unrelated cultural reference into it.',
         changes: [
-          { area: 'Cultural examples', baseline: 'Uses neutral curriculum examples.', informed: 'No cultural references were added because none were supplied.' },
-          { area: 'Evidence', baseline: 'Based on the lesson objective and teaching brief.', informed: 'No Qloo entities, affinity scores or recommendations were used.' },
+          { area: 'Cultural examples', baseline: 'Uses neutral curriculum examples.', informed: 'No Qloo candidate passed the relevance check; no cultural example was inserted.' },
+          { area: 'Evidence', baseline: 'Based on the lesson objective and teaching brief.', informed: 'Qloo affinity results were reviewed but not used as evidence of teaching relevance.' },
         ],
-        cautions: ['This is a curriculum-only draft. Add teacher-chosen cultural anchors to request Qloo recommendations.'],
+        cautions: ['Qloo affinity is audience taste adjacency, not evidence of subject relevance, age suitability, or learning benefit.'],
       }
       : comparisonRes && typeof comparisonRes === 'object'
         ? {
@@ -143,7 +164,7 @@ export default async function (req) {
 
     return Response.json({
       brief,
-      mode: demo ? 'demo' : curriculumOnly ? 'curriculum' : 'qloo',
+      mode: demo ? 'demo' : curriculumFallback ? 'curriculum' : 'qloo',
       baseline: {
         ...baseline,
         examples: (baseline.examples || []).slice(0, 3).map((e) => ({
@@ -159,8 +180,10 @@ export default async function (req) {
       validation: {
         cited: grounded.examples.length,
         removed: grounded.removed,
-        note: curriculumOnly
-          ? 'No Qloo recommendations were used. The lesson uses neutral curriculum examples only.'
+        note: curriculumFallback
+          ? (curriculumOnly
+            ? 'No Qloo recommendations were used. The lesson uses neutral curriculum examples only.'
+            : 'No reviewed Qloo candidate passed the objective-relevance check. The curriculum-led lesson was retained.')
           : grounded.removed.length
             ? `${grounded.removed.length} cited item(s) were not in the verified result set and were removed.`
             : 'Every cited example was checked against the verified result set.',
