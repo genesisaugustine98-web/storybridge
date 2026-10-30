@@ -119,7 +119,7 @@ export default async function (req) {
     const comparisonRes = curriculumOnly
       ? null
       : await base44.asServiceRole.integrations.Core.InvokeLLM({
-        prompt: comparePrompt(brief, baseline, informed, 'qloo'),
+        prompt: comparePrompt(brief, baseline, informed, demo ? 'demo' : 'qloo'),
         response_json_schema: COMPARE_SCHEMA,
         model: 'automatic',
       });
