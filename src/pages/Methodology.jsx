@@ -6,13 +6,19 @@ const ENDPOINTS = [
   {
     method: 'GET',
     path: '/search',
-    params: 'query, types, take, sort_by',
-    purpose: 'Resolves each teacher anchor to a real Qloo entity id.',
+    params: 'query, types, take=6, sort_by=match',
+    purpose: 'Resolves each teacher anchor to a real Qloo entity id, verified against your wording.',
+  },
+  {
+    method: 'GET',
+    path: '/v2/tags',
+    params: 'filter.query, take=20',
+    purpose: 'Resolves a Music genre anchor to a real Qloo genre tag id, checked against your wording.',
   },
   {
     method: 'GET',
     path: '/v2/insights',
-    params: 'filter.type, signal.interests.entities, take=8, feature.explainability=true',
+    params: 'filter.type, signal.interests.entities, signal.interests.tags, take=8, feature.explainability=true',
     purpose: 'Returns affinity-ranked related entities, used as the candidate classroom examples.',
   },
 ];
@@ -66,13 +72,30 @@ export default function Methodology() {
 
           <Section number="02" title="How the Qloo step works">
             <p>
-              Calls are made only from the server, to <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11.5px]">https://api.qloo.com</code>,
+              Calls are made only from the server, to <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11.5px]">https://hackathon.api.qloo.com</code>,
               with the key read from the <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11.5px]">QLOO_API_KEY</code> secret.
               The key is never sent to the browser and never appears in a page, a URL or a response.
             </p>
             <ol className="list-decimal space-y-1.5 pl-5">
-              <li>Each anchor is searched once to get a real Qloo entity id. If nothing is found, the anchor is shown as unresolved — nothing is guessed.</li>
-              <li>One Insights call per example type (film, book, music artist) is sent with all resolved anchors as the seed signal.</li>
+              <li>
+                Each anchor is resolved to a real Qloo id, and a result is accepted only when its name carries the words
+                that were searched for. Films, books, artists and places go through <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">/search</code>:
+                first within their own type, then with no type filter, then with only the identifying words — so
+                &ldquo;Nollywood drama&rdquo; becomes a Nollywood film, not a film whose title happens to contain the
+                word &ldquo;drama&rdquo;. A <strong>Music genre</strong> anchor goes through{' '}
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">/v2/tags</code> instead and resolves
+                to a real genre tag, such as Afrobeats{' '}
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10.5px]">urn:tag:genre:music:afrobeats</code>,
+                rather than to a venue tag called &ldquo;Afro Beats Parties&rdquo;. Suggestions that fail the name check
+                are counted as rejected in the panel; if nothing passes, the anchor stays unresolved — nothing is guessed.
+              </li>
+              <li>
+                One Insights call per example type (film, book, music artist) carries the verified entity ids in{' '}
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">signal.interests.entities</code> and the
+                verified genre-tag ids in{' '}
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">signal.interests.tags</code> — both
+                together when both exist, and never neither.
+              </li>
               <li>Each returned entity keeps its own <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">query.affinity</code> and, when available, its explainability entries naming the anchors that drove it.</li>
               <li>That list is the only cultural material the lesson writer may cite.</li>
               <li>The server then rebuilds every cited example from the Qloo payload itself — name, entity id, affinity and drivers — so no score displayed in the app was written by the language model.</li>

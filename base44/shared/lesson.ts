@@ -188,7 +188,9 @@ export function informedPrompt(brief, evidence) {
 
   const anchorList = (evidence.anchors || [])
     .filter((a) => a.resolved)
-    .map((a) => `"${a.label}" (${a.kind}) -> Qloo entity "${a.resolved.name}" [${a.resolved.entityId}]`)
+    .map((a) => (a.resolved.tagId
+      ? `"${a.label}" (${a.kind}) -> Qloo genre tag "${a.resolved.name}" [${a.resolved.tagId}]`
+      : `"${a.label}" (${a.kind}) -> Qloo entity "${a.resolved.name}" [${a.resolved.entityId}]`))
     .join('\n') || 'none resolved';
 
   return `You are an experienced Nigerian English Language teacher writing a culturally grounded lesson plan.

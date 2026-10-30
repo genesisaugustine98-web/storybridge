@@ -52,6 +52,11 @@ function CallTrace({ calls }) {
             <span className="font-mono text-foreground">{call.path}</span>
             <span className="min-w-0 flex-1 truncate text-muted-foreground">{call.summary}</span>
             <span className="tnum text-muted-foreground">{call.ms} ms</span>
+            {!call.ok && call.message ? (
+              <span className="w-full break-words font-mono text-[10.5px] leading-relaxed text-destructive">
+                {call.message}
+              </span>
+            ) : null}
           </li>
         ))}
       </ul>
@@ -122,7 +127,7 @@ export default function EvidencePanel({ data, busy, onContinue, onDemo, onRetry,
             <p className="label-caps">Your anchors</p>
             <p className="mt-1 text-[12.5px] text-muted-foreground">
               {live
-                ? 'Each anchor as Qloo resolved it. An anchor with no match is left empty — never filled in.'
+                ? 'Each anchor as Qloo resolved it. A result is accepted only if its name carries your wording; lookalikes are rejected and the anchor left empty.'
                 : 'These are the references you chose. Nothing here came from Qloo.'}
             </p>
           </div>
@@ -134,11 +139,21 @@ export default function EvidencePanel({ data, busy, onContinue, onDemo, onRetry,
                   {anchor.kind}
                 </span>
                 {anchor.resolved ? (
-                  <span className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+                  <span className="flex flex-wrap items-center gap-1.5 text-[12px] text-muted-foreground">
                     <Check className="h-3 w-3 text-emerald-600" />
                     {anchor.resolved.name}
-                    <span className="font-mono text-[10.5px] text-muted-foreground/70">
-                      {shortId(anchor.resolved.entityId)}
+                    {anchor.resolved.tagId ? (
+                      <span className="rounded-full border border-accent/35 bg-accent/10 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.1em] text-accent">
+                        genre tag
+                      </span>
+                    ) : null}
+                    <span
+                      className="font-mono text-[10.5px] text-muted-foreground/70"
+                      title={anchor.resolved.tagId || anchor.resolved.entityId}
+                    >
+                      {anchor.resolved.tagId
+                        ? String(anchor.resolved.tagId).replace(/^urn:tag:/, '')
+                        : shortId(anchor.resolved.entityId)}
                     </span>
                   </span>
                 ) : (
@@ -189,7 +204,7 @@ export default function EvidencePanel({ data, busy, onContinue, onDemo, onRetry,
 
       {data.endpoints && data.endpoints.length ? (
         <p className="text-[11.5px] leading-relaxed text-muted-foreground">
-          Endpoints used on api.qloo.com:{' '}
+          Endpoints used on hackathon.api.qloo.com:{' '}
           {data.endpoints.map((e) => `${e.method} ${e.path}`).join(' · ')}. The API key stays server-side.
         </p>
       ) : null}

@@ -41,9 +41,11 @@ function cleanEvidence(input) {
       ? evidence.anchors.slice(0, MAX_ANCHORS).map((a) => ({
         label: String(a && a.label ? a.label : ''),
         kind: String(a && a.kind ? a.kind : ''),
-        resolved: a && a.resolved && a.resolved.entityId
-          ? { entityId: String(a.resolved.entityId), name: String(a.resolved.name || '') }
-          : null,
+        resolved: a && a.resolved && a.resolved.tagId
+          ? { tagId: String(a.resolved.tagId), name: String(a.resolved.name || ''), typeLabel: 'genre' }
+          : a && a.resolved && a.resolved.entityId
+            ? { entityId: String(a.resolved.entityId), name: String(a.resolved.name || '') }
+            : null,
       }))
       : [],
     candidates: Array.isArray(evidence.candidates)
