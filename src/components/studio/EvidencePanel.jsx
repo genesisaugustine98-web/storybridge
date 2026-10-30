@@ -68,6 +68,7 @@ export default function EvidencePanel({ data, busy, onContinue, onDemo, onRetry,
   const mode = data?.mode;
   const live = mode === 'live';
   const demo = mode === 'demo';
+  const curriculum = mode === 'curriculum';
   const broken = mode === 'setup' || mode === 'unavailable' || mode === 'no-matches';
 
   return (
@@ -76,6 +77,13 @@ export default function EvidencePanel({ data, busy, onContinue, onDemo, onRetry,
         <Notice tone="info" title={data.detail}>
           These values are copied straight from Qloo&apos;s response across {data.calls.length} server-side{' '}
           {data.calls.length === 1 ? 'call' : 'calls'}. Nothing here was written by the lesson model.
+        </Notice>
+      ) : null}
+
+      {curriculum ? (
+        <Notice tone="info" title="No cultural anchors added">
+          <p>{data.detail}</p>
+          <p className="mt-2">This will be a curriculum-only lesson. No Qloo searches, entities or affinity scores will be used.</p>
         </Notice>
       ) : null}
 
@@ -104,20 +112,20 @@ export default function EvidencePanel({ data, busy, onContinue, onDemo, onRetry,
               disabled={busy}
               className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1.5 text-[12px] font-medium text-accent transition-colors hover:bg-accent/15"
             >
-              <FlaskConical className="h-3.5 w-3.5" /> Continue in demo mode
+              <FlaskConical className="h-3.5 w-3.5" /> Use my references without Qloo
             </button>
           </div>
           <p className="mt-2 text-[11.5px]">
-            Demo mode uses only the references you typed. It shows no Qloo entities and no Qloo scores, and it never
+            This option uses only the references you typed. It shows no Qloo entities and no Qloo scores, and it never
             pretends a taste API endorsed your choices.
           </p>
         </Notice>
       ) : null}
 
       {demo ? (
-        <Notice tone="warn" title="Demo mode — your references only">
-          No Qloo call is made in this run. The lesson will use only the anchors below, and every example will be
-          labelled <em>teacher-specified</em>. There are no affinity scores anywhere in demo mode.
+        <Notice tone="warn" title="Teacher references — no Qloo recommendations">
+          No Qloo recommendation was available for this run. The lesson will use only the anchors you entered, and
+          every example will be labelled <em>teacher-specified</em>. No affinity scores will be shown.
         </Notice>
       ) : null}
 
@@ -220,16 +228,16 @@ export default function EvidencePanel({ data, busy, onContinue, onDemo, onRetry,
         <button
           type="button"
           onClick={onContinue}
-          disabled={busy || (!live && !demo)}
+          disabled={busy || (!live && !demo && !curriculum)}
           className={cn(
             'inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-[13.5px] font-medium transition-all',
-            busy || (!live && !demo)
+            busy || (!live && !demo && !curriculum)
               ? 'cursor-not-allowed bg-muted text-muted-foreground'
               : 'bg-primary text-primary-foreground hover:opacity-92'
           )}
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          {busy ? 'Drafting lesson…' : demo ? 'Build the demo lesson' : 'Build the Qloo-informed lesson'}
+          {busy ? 'Drafting lesson…' : curriculum ? 'Build curriculum-only lesson' : demo ? 'Build lesson with my references' : 'Build the Qloo-informed lesson'}
           {!busy ? <ArrowRight className="h-4 w-4" /> : null}
         </button>
       </div>
