@@ -183,7 +183,7 @@ export default function Studio() {
                     One grounded lesson.
                   </h1>
                   <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-muted-foreground">
-                    StoryBridge turns a single English Language objective into a lesson you can teach on Monday: a
+                    StoryBridge turns a single curriculum objective into a lesson you can teach on Monday: a
                     plan, a script, one activity, three questions, a rubric sheet — and a culture check that shows
                     its working.
                   </p>
