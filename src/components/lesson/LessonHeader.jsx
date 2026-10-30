@@ -12,7 +12,7 @@ export default function LessonHeader({ lesson, brief, mode, validation, draftLab
           <span
             className={cn(
               'rounded-full border px-2 py-0.5 text-[10.5px] font-medium',
-              mode === 'demo'
+              mode === 'demo' || mode === 'curriculum'
                 ? 'border-accent/35 bg-accent/10 text-accent'
                 : 'border-primary/25 bg-primary/10 text-primary'
             )}
@@ -49,8 +49,10 @@ export default function LessonHeader({ lesson, brief, mode, validation, draftLab
           <span className="font-medium">Review before you teach this.</span> Every suggestion here is a draft. Check
           the language level, the suitability of each example for your class, and every fact before use.
           {mode === 'demo'
-            ? ' This draft is in demo mode: examples are your own references and no Qloo score is involved.'
-            : ' Affinity shows what audiences who share your anchors tend to also like — not what your pupils will enjoy or learn from.'}
+            ? ' This draft uses only your own references; no Qloo recommendations or scores were available.'
+            : mode === 'curriculum'
+              ? ' This is a curriculum-only draft. No cultural references or Qloo recommendations were used.'
+              : ' Affinity shows what audiences who share your anchors tend to also like — not what your pupils will enjoy or learn from.'}
         </p>
       </div>
 
