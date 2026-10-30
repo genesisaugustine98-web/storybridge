@@ -1,12 +1,5 @@
 # StoryBridge — Curriculum-to-Culture Lesson Agent
 
-**Live demo:** https://story-bridge-curriculum-to-culture-150cd3d4.base44.app  
-**Source repository:** https://github.com/genesisaugustine98-web/storybridge  
-**License:** MIT (see `LICENSE`)
-
-StoryBridge is a curriculum-to-culture lesson agent for Nigerian secondary-school English Language teachers. It converts a teacher’s curriculum objective into a reviewable lesson, shows what Qloo cultural-affinity evidence contributes, and compares the result against a curriculum-only baseline.
-
-
 StoryBridge turns **one** English Language curriculum objective into **one** practical, culturally grounded,
 teacher-reviewable lesson for Nigerian secondary schools.
 
@@ -75,8 +68,11 @@ Base host: `https://hackathon.api.qloo.com`. Auth header: `X-Api-Key: <QLOO_API_
 
 | Method | Path | Parameters sent | Purpose |
 | --- | --- | --- | --- |
-| `GET` | `/search` | `query`, `types` (mapped from the anchor kind), `take=3`, `sort_by=match` | Resolve a teacher anchor to a real Qloo entity id. If the mapped type returns nothing, the search is repeated once without a type filter. |
-| `GET` | `/v2/insights` | `filter.type` (film / book / music artist), `signal.interests.entities` (resolved anchor ids, comma separated), `take=8`, `feature.explainability=true` | Affinity-ranked related entities, used as the candidate classroom examples. |
+| `GET` | `/search` | `query`, optional `types`, `take=6`, `sort_by=match` | Resolve film, TV, book, artist and place anchors to Qloo entity IDs. Returned names are checked against the exact wording searched; lookalikes are rejected. |
+| `GET` | `/v2/tags` | `filter.query`, `take=20` | Resolve Music genre anchors through Qloo’s tag taxonomy. Genre-type tags are preferred and their names are checked before use. |
+| `GET` | `/v2/insights` | `filter.type`, verified `signal.interests.entities` and/or `signal.interests.tags`, `take=8`, `feature.explainability=true` | Retrieve affinity-ranked film, book and music-artist candidates. The endpoint is called only when at least one verified signal exists. |
+
+Anchor resolution uses strict contiguous name matching because Qloo `/search` is fuzzy and supplies no dependable numeric match-confidence score. A result that does not carry the searched wording is rejected; the anchor stays unresolved rather than being seeded with a lookalike.
 
 Example (server-side shape, key never in source):
 
@@ -89,15 +85,14 @@ curl -G 'https://hackathon.api.qloo.com/v2/insights' \
   --data-urlencode 'feature.explainability=true'
 ```
 
-Values read from the Insights response:
+Values read from Qloo responses:
 
-- `results.entities[].entity_id`, `.name`, `.subtype`
-- `results.entities[].query.affinity` — shown exactly as returned, rounded to 4 decimals for display only
-- `results.entities[].query.explainability` — used, when present, to name which anchors a result is linked to
+- `/search`: `results[].entity_id`, `.name`, `.subtype`
+- `/v2/tags`: `results.tags[].id`, `.name`, `.type`
+- `/v2/insights`: `results.entities[].entity_id`, `.name`, `.subtype`, and `.query.affinity`
+- `results.entities[].query.explainability` is used only when Qloo returns it. Tag-based Insights may omit explainability; StoryBridge does not invent tag-level drivers.
 
-Anchor kind → entity type: film → `urn:entity:movie`; TV show → `urn:entity:tv_show`; book → `urn:entity:book`;
-artist → `urn:entity:artist`; music genre → `urn:entity:artist` (genre text resolves to representative artists);
-sport → `urn:entity:person`; place → `urn:entity:locality` / `urn:entity:place`; radio programme → `urn:entity:podcast`.
+Anchor kind → entity type: film → `urn:entity:movie`; TV show → `urn:entity:tv_show`; book → `urn:entity:book`; artist → `urn:entity:artist`; music genre → Qloo genre tag (not an artist entity); sport → `urn:entity:person`; place → `urn:entity:locality` / `urn:entity:place`; radio programme → `urn:entity:podcast`.
 
 If Qloo's response shape changes or a parameter is rejected, the function reports the failure verbatim and the UI
 shows an unavailable state. It never substitutes demo data for a failed live call.

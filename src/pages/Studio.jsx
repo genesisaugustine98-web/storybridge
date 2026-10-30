@@ -44,7 +44,7 @@ export default function Studio() {
         const res = await base44.functions.invoke('qlooEvidence', { probe: true });
         if (cancelled) return;
         const mode = res.data && res.data.mode;
-        setStatus(mode === 'live' ? 'live' : mode === 'setup' ? 'setup' : 'unavailable');
+        setStatus(mode === 'live' ? 'live' : mode === 'setup' ? 'setup' : mode === 'no-matches' ? 'no-matches' : 'unavailable');
       } catch {
         if (!cancelled) setStatus('unavailable');
       }
