@@ -71,8 +71,8 @@ export default async function (req) {
     const anchors = cleanAnchors(payload.anchors && payload.anchors.length ? payload.anchors : evidence.anchors);
     const curriculumOnly = !demo && evidence.mode === 'curriculum';
 
-    if (brief.objective.length < 8) {
-      return Response.json({ error: 'A learning objective of at least 8 characters is required.' }, { status: 400 });
+    if (!brief.objective.trim()) {
+      return Response.json({ error: 'Enter a lesson topic or learning objective before continuing.' }, { status: 400 });
     }
 
     if (demo && !anchors.length) {
