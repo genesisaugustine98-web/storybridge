@@ -8,7 +8,7 @@ export const LESSON_SCHEMA = {
     outcomes: { type: 'array', minItems: 2, maxItems: 4, items: { type: 'string' } },
     examples: {
       type: 'array',
-      minItems: 1,
+      minItems: 0,
       maxItems: 3,
       items: {
         type: 'object',
@@ -146,8 +146,8 @@ export const COMPARE_SCHEMA = {
   },
 };
 
-const HOUSE_STYLE = `Write for a real Nigerian secondary-school classroom. Be concrete and short — a teacher should be able to teach from this without rewriting it.
-Use Nigerian spellings and exam-board phrasing (WAEC/NECO style). Never address pupils as a group in the script using invented names.`;
+const HOUSE_STYLE = `Write for a real Nigerian secondary-school classroom and the subject implied by the teacher's objective. Do not assume every lesson is English Language. Be concrete and short — a teacher should be able to teach from this without rewriting it.
+Use Nigerian spellings and relevant Nigerian curriculum or exam-board phrasing where appropriate (including WAEC/NECO for senior secondary work). Never address pupils as a group in the script using invented names.`;
 
 function briefLines(brief) {
   return [
@@ -159,13 +159,13 @@ function briefLines(brief) {
 }
 
 export function baselinePrompt(brief) {
-  return `You are an experienced Nigerian English Language teacher writing a curriculum-only lesson plan.
+  return `You are an experienced Nigerian secondary-school teacher preparing a curriculum-only lesson in the subject most clearly indicated by the teacher's objective.
 
 BRIEF
 ${briefLines(brief)}
 
 TASK
-Produce one complete lesson exactly to the JSON schema.
+Produce one complete lesson exactly to the JSON schema. Preserve the teacher's objective and subject; do not silently replace the topic with a different one.
 
 RULES FOR THIS BASELINE DRAFT
 - Plan strictly inside ${brief.duration} minutes and use only the listed materials.
@@ -193,7 +193,7 @@ export function informedPrompt(brief, evidence) {
       : `"${a.label}" (${a.kind}) -> Qloo entity "${a.resolved.name}" [${a.resolved.entityId}]`))
     .join('\n') || 'none resolved';
 
-  return `You are an experienced Nigerian English Language teacher writing a culturally grounded lesson plan.
+  return `You are an experienced Nigerian secondary-school teacher preparing a lesson in the subject most clearly indicated by the teacher's objective.
 
 BRIEF
 ${briefLines(brief)}
@@ -201,19 +201,24 @@ ${briefLines(brief)}
 TEACHER-CHOSEN CULTURAL ANCHORS (resolved by Qloo)
 ${anchorList}
 
-QLOO AFFINITY RESULTS (real API output — this list is the ONLY cultural material you may cite)
+QLOO DISCOVERY CANDIDATES (all were explicitly selected by the teacher after reviewing this list)
 ${lines || 'none'}
 
-TASK
-Produce one complete lesson exactly to the JSON schema.
+IMPORTANT EVIDENCE LIMIT
+Qloo affinity describes audience taste adjacency only. It does NOT establish subject relevance, conceptual similarity, classroom suitability, age suitability, pupil preference, or learning benefit. Qloo provides only the title, broad type, affinity value, and possible link to a teacher-chosen anchor. It does not provide verified information about the work's plot, scenes, characters, lyrics, quotations, factual claims, messages, language level, or educational content.
 
-RULES
-- Choose at most 3 examples in "examples", and copy each "name" EXACTLY from the Qloo list above. Choose ones you can genuinely teach persuasive language with.
-- Set "evidenceRef" to "qloo:<the entity id from that row>".
-- "useInLesson" must explain the classroom move in one or two sentences — what the teacher asks pupils to notice in that example. It is your teaching reasoning, not Qloo's.
-- Do NOT write any affinity number, percentage or score anywhere in the prose. The teacher sees the real scores in the evidence panel; you must not restate or re-round them.
-- NEVER claim that an affinity score shows pupils will like something, learn from it, or that it suits their age or level. Affinity only describes taste adjacency between audiences.
-- If a chosen example could be unsuitable for a classroom, say so plainly in "useInLesson" and let the teacher decide.
+TASK
+Produce one complete lesson exactly to the JSON schema. Preserve the teacher's stated objective, subject, class level, and duration. Do not silently change the topic.
+
+STRICT RULES
+- Select zero to three examples, and use only titles copied EXACTLY from the teacher-selected Qloo list above.
+- A Qloo candidate may be used only when its relevance to this exact objective is clear from information supplied by the teacher. An affinity score, title, type, or link to an anchor is NOT proof of relevance.
+- If relevance is uncertain, do not force the candidate into the lesson. Return an empty examples array when none can be justified. A sound curriculum-led lesson is better than a fabricated cultural connection.
+- Do not invent or imply any facts about a film, book, artist, song, programme, person, or place. Do not describe a plot, scene, character, lyric, quotation, moral, argument, or educational message unless the teacher supplied that information in the brief.
+- When a selected resource is used, refer to its title only as a teacher-previewed optional resource. Write the classroom step so the teacher supplies a verified excerpt or detail after previewing it; do not invent what pupils will see or hear.
+- For each included example, set evidenceRef to "qloo:<the exact entity id from that row>". The useInLesson field must state the teacher's verification step as well as the proposed classroom use.
+- Do not add unselected candidates, substitute lookalikes, fabricate local examples as Qloo output, or restate affinity numbers in the lesson prose.
+- Never claim the results predict what these pupils will enjoy, learn from, or are suitable for.
 - Plan strictly inside ${brief.duration} minutes and use only the listed materials.
 - 3 assessment questions only, each with a short answer and a 2-3 band rubric.
 - The handout must be printable and usable with no internet access.
@@ -223,7 +228,7 @@ ${HOUSE_STYLE}`;
 
 export function demoPrompt(brief, anchors) {
   const list = (anchors || []).map((a) => `- "${a.label}" (${a.kind})`).join('\n');
-  return `You are an experienced Nigerian English Language teacher writing a lesson that uses only the teacher's own cultural references.
+  return `You are an experienced Nigerian secondary-school teacher preparing a lesson in the subject most clearly indicated by the teacher's objective, using only the teacher's own references.
 
 BRIEF
 ${briefLines(brief)}
@@ -232,12 +237,14 @@ TEACHER-SPECIFIED REFERENCES (the only cultural material you may use)
 ${list}
 
 TASK
-Produce one complete lesson exactly to the JSON schema.
+Produce one complete lesson exactly to the JSON schema. Preserve the teacher's objective and subject.
 
 RULES
-- No Qloo data was available for this run. Do NOT invent any Qloo score, entity id, affinity or recommendation, and never imply that a taste API endorsed these choices.
-- In "examples", use only the references listed above, copied exactly. Set "evidenceRef" to "teacher" for every one.
-- "useInLesson" explains the classroom move in one or two sentences. This is your reasoning as a teacher, nothing more.
+- No Qloo data was used for this lesson. Do NOT invent a Qloo score, entity id, affinity or recommendation.
+- Use a teacher-specified reference only if it is directly relevant to the objective and you can explain that relevance from information the teacher supplied. Otherwise leave it out.
+- Do not invent or imply facts about the reference's plot, scenes, lyrics, quotations, message, or educational value. Ask the teacher to supply a verified excerpt or detail after previewing it.
+- In "examples", use only the references listed above, copied exactly. Set evidenceRef to "teacher" for every one.
+- If none can be justified, return an empty examples array and write a strong curriculum-led lesson.
 - Plan strictly inside ${brief.duration} minutes and use only the listed materials.
 - 3 assessment questions only, each with a short answer and a 2-3 band rubric.
 - The handout must be printable and usable with no internet access.
@@ -246,23 +253,25 @@ ${HOUSE_STYLE}`;
 }
 
 export function comparePrompt(brief, baseline, informed, mode) {
-  return `Compare two drafts of the same ${brief.classLevel} English Language lesson on "${brief.objective}".
+  return `Compare two drafts of the same ${brief.classLevel} lesson on "${brief.objective}".
 
-DRAFT A — curriculum-only baseline (no cultural references at all):
+DRAFT A — curriculum-only baseline:
 ${JSON.stringify(baseline)}
 
-DRAFT B — ${mode === 'demo' ? 'teacher-anchor draft (no Qloo data available)' : 'Qloo-informed draft (its examples come from live Qloo affinity results, chosen by the teacher-facing model)'}:
+DRAFT B — ${mode === 'demo' ? 'teacher-reference draft (no Qloo data)' : 'draft made using only teacher-approved Qloo candidates'}:
 ${JSON.stringify(informed)}
 
 TASK
 Return the JSON object.
-- "summary": 2-3 sentences on what actually changed between the drafts and why it matters for this classroom.
-- "changes": 2-5 rows. Each row names what you compared ("Cultural examples", "Starter", "Main activity", "Assessment"), how the baseline handled it, how the informed draft handled it.
-- "cautions": 1-3 short warnings a teacher should read before using the informed draft (for example: affinity is not evidence of learning suitability; content suitability must be checked by the teacher).
+- Describe only differences that are plainly visible in the two supplied drafts.
+- Do not say the Qloo-informed draft is better, more engaging, more effective, or more culturally relevant unless the actual lesson content demonstrates a specific, supportable reason.
+- Do not infer a candidate's plot, themes, scenes, educational value, pupil popularity, or age suitability from its title, type, or affinity score.
+- If Draft B contains no approved cultural examples, say that the Qloo discovery did not produce a usable classroom example and the lesson remains curriculum-led.
+- "changes": 2-5 rows about actual changes ("Cultural examples", "Starter", "Main activity", "Assessment"), not imagined learning gains.
+- "cautions": include that affinity is audience taste adjacency, not evidence of curriculum relevance, learning suitability, or pupil preference.
 
 RULES
-- Describe only what is visible in the two drafts. Do not add new Qloo findings, scores or entities.
-- Never say an affinity score proves pupils will learn better or prefer something.
+- Never invent new Qloo findings, scores, entities, or entities' content.
 - Plain, specific English. No hype.`;
 }
 
@@ -303,7 +312,7 @@ export function groundExamples(examples, evidence, demo) {
     if (demo) {
       const anchor = anchors.find((a) => {
         const label = norm(a.label);
-        return label && (label === name || label.includes(name) || name.includes(label));
+        return label && label === name;
       });
       if (!anchor) {
         removed.push(example.name);
@@ -320,8 +329,7 @@ export function groundExamples(examples, evidence, demo) {
       continue;
     }
 
-    const hit = candidates.find((c) => norm(c.name) === name)
-      || candidates.find((c) => norm(c.name).includes(name) || name.includes(norm(c.name)));
+    const hit = candidates.find((c) => norm(c.name) === name);
     if (!hit) {
       removed.push(example.name);
       continue;
