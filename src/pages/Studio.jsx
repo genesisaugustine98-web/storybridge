@@ -36,6 +36,8 @@ export default function Studio() {
   const [lesson, setLesson] = useState(null);
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState('');
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState([]);
+  const [teacherConfirmed, setTeacherConfirmed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +74,8 @@ export default function Studio() {
 
     if (!brief.anchors.length) {
       setDemo(false);
+      setSelectedCandidateIds([]);
+      setTeacherConfirmed(false);
       setQloo({
         mode: 'curriculum',
         detail: 'No cultural anchors were added. You can build a curriculum-only lesson now, or return to add references and request Qloo recommendations.',
@@ -89,6 +93,8 @@ export default function Studio() {
       const res = await base44.functions.invoke('qlooEvidence', { anchors: brief.anchors });
       const data = res.data || {};
       setQloo(data);
+      setSelectedCandidateIds([]);
+      setTeacherConfirmed(false);
       setDemo(false);
       setStatus(data.mode === 'live' ? 'live' : data.mode === 'setup' ? 'setup' : data.mode === 'no-matches' ? 'no-matches' : 'unavailable');
       advance(2);
@@ -132,11 +138,23 @@ export default function Studio() {
     setBusy('lesson');
     setError('');
     try {
+      const approvedCandidates = qloo && Array.isArray(qloo.candidates)
+        ? qloo.candidates.filter((candidate) => selectedCandidateIds.includes(candidate.entityId))
+        : [];
       const evidence = demo
         ? { mode: 'demo', anchors: qloo ? qloo.anchors : brief.anchors, candidates: [] }
         : qloo && qloo.mode === 'curriculum'
           ? { mode: 'curriculum', anchors: [], candidates: [] }
-          : { mode: 'qloo', anchors: qloo ? qloo.anchors : [], candidates: qloo ? qloo.candidates : [] };
+          : {
+            mode: 'qloo-approved',
+            anchors: qloo ? qloo.anchors : [],
+            candidates: approvedCandidates,
+            teacherReviewed: true,
+          };
+
+      if (!demo && evidence.mode === 'qloo-approved' && !approvedCandidates.length) {
+        throw new Error('Select at least one Qloo candidate you have reviewed, or choose to build from your original anchor without Qloo recommendations.');
+      }
 
       const res = await base44.functions.invoke('generateLesson', {
         brief,
@@ -251,6 +269,10 @@ export default function Studio() {
                   onDemo={demo ? buildLesson : startDemo}
                   onRetry={checkEvidence}
                   onBack={() => go(1)}
+                  selectedCandidateIds={selectedCandidateIds}
+                  onSelectionChange={setSelectedCandidateIds}
+                  teacherConfirmed={teacherConfirmed}
+                  onTeacherConfirmedChange={setTeacherConfirmed}
                 />
               </>
             ) : null}
