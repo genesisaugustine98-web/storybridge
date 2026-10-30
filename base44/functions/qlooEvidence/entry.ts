@@ -211,7 +211,21 @@ export default async function (req) {
     // Connection test: two real calls. /search comes first because /v2/insights
     // needs a real entity id in signal.interests.entities — asking it without one
     // is what made the old probe come back HTTP 400.
-    if (probe || anchors.length === 0) {
+    // A health probe checks connectivity only. A normal lesson request with no
+    // teacher anchors must never be converted into a hard-coded demo seed.
+    if (anchors.length === 0 && !probe) {
+      return Response.json({
+        mode: 'no-anchors',
+        detail: 'No cultural anchors were supplied. Add one or more teacher-chosen references to request Qloo recommendations, or build a curriculum-only lesson.',
+        anchors: [],
+        candidates: [],
+        calls: [],
+        endpoints: ENDPOINTS,
+        fetchedAt: new Date().toISOString(),
+      });
+    }
+
+    if (probe) {
       const search = await qlooGet({
         path: '/search',
         params: { query: 'The Dark Knight', types: ['urn:entity:movie'], take: 1 },
@@ -327,25 +341,43 @@ export default async function (req) {
       });
     }
 
-    // Only verified signals go in: entity ids, genre-tag ids, or both together.
-    // Insights is never called with neither (Qloo answers that with HTTP 400).
-    const signalParams = {};
-    if (seedIds.length) signalParams['signal.interests.entities'] = seedIds.join(',');
-    if (tagIds.length) signalParams['signal.interests.tags'] = tagIds.join(',');
-    const signalNote = [
-      seedIds.length ? `${seedIds.length} entity id${seedIds.length === 1 ? '' : 's'}` : '',
-      tagIds.length ? `${tagIds.length} genre tag${tagIds.length === 1 ? '' : 's'}` : '',
-    ].filter(Boolean).join(' + ');
+    // Query each verified seed independently. Some Qloo entity IDs (notably
+    // certain book/movie records on the hackathon host) are rejected as Insights
+    // signals. Isolating seeds means one unsupported ID cannot invalidate every
+    // other teacher reference in the same brief.
+    const seedSignals = [
+      ...seedEntities.map((entity) => ({
+        param: 'signal.interests.entities',
+        id: entity.entityId,
+        name: entity.name,
+        kind: 'entity',
+      })),
+      ...resolved.filter((r) => r.tag).map((r) => ({
+        param: 'signal.interests.tags',
+        id: r.tag.tagId,
+        name: r.tag.name,
+        kind: 'tag',
+      })),
+    ];
+
+    for (const signal of seedSignals) {
+      seedNamesById[signal.id] = signal.name;
+    }
 
     const insightCalls = await Promise.all(
-      EXAMPLE_TYPES.map((target) => qlooGet({
+      EXAMPLE_TYPES.flatMap((target) => seedSignals.map((signal) => qlooGet({
         path: '/v2/insights',
-        params: { 'filter.type': target.type, ...signalParams, take: 8, 'feature.explainability': 'true' },
+        params: {
+          'filter.type': target.type,
+          [signal.param]: signal.id,
+          take: 8,
+          'feature.explainability': 'true',
+        },
         apiKey,
-        label: `insights: ${target.label}`,
-        summary: `filter.type=${target.type}; ${signalNote}; take=8`,
+        label: `insights: ${target.label} via ${signal.name}`,
+        summary: `filter.type=${target.type}; ${signal.param}=${signal.id}; take=8`,
         timeoutMs: 15000,
-      }))
+      })))
     );
 
     for (const call of insightCalls) {
@@ -396,8 +428,8 @@ export default async function (req) {
     return Response.json({
       mode: top.length ? 'live' : 'no-matches',
       detail: top.length
-        ? `${top.length} live Qloo ${top.length === 1 ? 'result' : 'results'} from ${calls.length} server-side ${calls.length === 1 ? 'call' : 'calls'}.`
-        : 'Qloo answered, but returned no related entities with an affinity score for these anchors.',
+        ? `${top.length} live Qloo ${top.length === 1 ? 'result' : 'results'} from ${seedSignals.length} independently tested teacher-chosen signal${seedSignals.length === 1 ? '' : 's'} (${insightCalls.filter((call) => !call.ok).length} Insights request${insightCalls.filter((call) => !call.ok).length === 1 ? '' : 's'} could not use their seed).`
+        : `Qloo resolved ${seedSignals.length} teacher-chosen signal${seedSignals.length === 1 ? '' : 's'}, but returned no affinity candidates. The rejected Insights requests are listed in the call trace; you can continue with your own references without Qloo scores.`,
       anchors: anchorRows,
       candidates: top,
       calls,
