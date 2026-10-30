@@ -49,46 +49,64 @@ export default function ComparePanel({ lesson, onBack }) {
         <p className="mt-3 text-[11.5px] text-muted-foreground">
           This summary is the model&apos;s own comparison of the two drafts — reasoning, not Qloo output.{' '}
           {mode === 'demo'
-            ? 'Demo mode: no Qloo data or affinity numbers appear anywhere in this run.'
-            : 'Affinity numbers shown below are copied from the Qloo results.'}
+            ? 'Teacher-reference mode: no Qloo data or affinity numbers appear anywhere in this run.'
+            : mode === 'curriculum'
+              ? 'Curriculum-only mode: no cultural references, Qloo data or affinity numbers were used.'
+              : 'Affinity numbers shown below are copied from the Qloo results.'}
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="card-soft p-5">
-          <div className="flex items-center justify-between gap-3">
-            <p className="label-caps">Draft A · curriculum only</p>
-            <span className="rounded-full border border-border px-2 py-0.5 text-[10.5px] text-muted-foreground">
-              no cultural references
-            </span>
-          </div>
-          <h3 className="mt-2 font-heading text-[17px] leading-snug">{baseline.lessonTitle}</h3>
-          <div className="mt-3">
-            <ExampleList examples={baseline.examples} tone="muted" />
-          </div>
-          <p className="mt-3 text-[12px] text-muted-foreground">
-            Activity: {baseline.activity.title || '—'}
-          </p>
-        </section>
-
-        <section className="card-soft border-primary/30 p-5">
-          <div className="flex items-center justify-between gap-3">
-            <p className="label-caps">{mode === 'demo' ? 'Draft B · teacher anchors' : 'Draft B · Qloo-informed'}</p>
-            <span className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[10.5px] text-primary">
-              {mode === 'demo' ? 'demo mode' : 'grounded in live results'}
-            </span>
-          </div>
+      {mode === 'curriculum' ? (
+        <section className="card-soft p-5 sm:p-6">
+          <p className="label-caps">Curriculum-only draft</p>
           <h3 className="mt-2 font-heading text-[17px] leading-snug">{informed.lessonTitle}</h3>
           <div className="mt-3">
-            <ExampleList examples={informed.examples} />
+            <ExampleList examples={informed.examples} tone="muted" />
           </div>
           <p className="mt-3 text-[12px] text-muted-foreground">
             Activity: {informed.activity.title || '—'}
           </p>
+          <p className="mt-3 text-[12px] text-muted-foreground">
+            Add teacher-chosen cultural anchors to request a separate Qloo-informed draft and comparison.
+          </p>
         </section>
-      </div>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <section className="card-soft p-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="label-caps">Draft A · curriculum only</p>
+              <span className="rounded-full border border-border px-2 py-0.5 text-[10.5px] text-muted-foreground">
+                no cultural references
+              </span>
+            </div>
+            <h3 className="mt-2 font-heading text-[17px] leading-snug">{baseline.lessonTitle}</h3>
+            <div className="mt-3">
+              <ExampleList examples={baseline.examples} tone="muted" />
+            </div>
+            <p className="mt-3 text-[12px] text-muted-foreground">
+              Activity: {baseline.activity.title || '—'}
+            </p>
+          </section>
 
-      {comparison.changes && comparison.changes.length ? (
+          <section className="card-soft border-primary/30 p-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="label-caps">{mode === 'demo' ? 'Draft B · teacher references' : 'Draft B · Qloo-informed'}</p>
+              <span className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[10.5px] text-primary">
+                {mode === 'demo' ? 'teacher-specified' : 'grounded in live results'}
+              </span>
+            </div>
+            <h3 className="mt-2 font-heading text-[17px] leading-snug">{informed.lessonTitle}</h3>
+            <div className="mt-3">
+              <ExampleList examples={informed.examples} />
+            </div>
+            <p className="mt-3 text-[12px] text-muted-foreground">
+              Activity: {informed.activity.title || '—'}
+            </p>
+          </section>
+        </div>
+      )}
+
+      {mode !== 'curriculum' && comparison.changes && comparison.changes.length ? (
         <section className="card-soft overflow-hidden">
           <div className="border-b border-border/60 px-5 py-3.5">
             <p className="label-caps">Side by side</p>
