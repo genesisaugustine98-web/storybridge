@@ -10,7 +10,11 @@ import { ArrowLeft, ArrowRight, Printer } from 'lucide-react';
 
 export default function LessonWorkspace({ lesson, brief, mode, validation, onCompare, onBack }) {
   const [printing, setPrinting] = useState(false);
-  const draftLabel = mode === 'demo' ? 'Demo · teacher anchors' : 'Qloo-informed';
+  const draftLabel = mode === 'demo'
+    ? 'Teacher references · no Qloo'
+    : mode === 'curriculum'
+      ? 'Curriculum-only'
+      : 'Qloo-informed';
 
   return (
     <div className="space-y-6">
