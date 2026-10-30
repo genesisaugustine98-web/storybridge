@@ -64,7 +64,18 @@ function CallTrace({ calls }) {
   );
 }
 
-export default function EvidencePanel({ data, busy, onContinue, onDemo, onRetry, onBack }) {
+export default function EvidencePanel({
+  data,
+  busy,
+  onContinue,
+  onDemo,
+  onRetry,
+  onBack,
+  selectedCandidateIds = [],
+  onSelectionChange = () => {},
+  teacherConfirmed = false,
+  onTeacherConfirmedChange = () => {},
+}) {
   const mode = data?.mode;
   const live = mode === 'live';
   const demo = mode === 'demo';
@@ -176,31 +187,48 @@ export default function EvidencePanel({ data, busy, onContinue, onDemo, onRetry,
       {live && data.candidates.length ? (
         <section className="card-soft overflow-hidden">
           <div className="border-b border-border/60 px-5 py-3.5">
-            <p className="label-caps">Candidate classroom examples</p>
+            <p className="label-caps">Qloo affinity results · teacher review required</p>
             <p className="mt-1 text-[12.5px] text-muted-foreground">
-              Ranked by Qloo affinity for audiences that share your anchors. The lesson may only cite from this list.
+              Ranked by audience taste adjacency, not lesson relevance. These are discovery results, not educational recommendations. Select only titles you know, have previewed, and can justify for this objective and age group. Unselected results are never sent to the lesson writer.
             </p>
           </div>
           <ol className="divide-y divide-border/60">
             {data.candidates.map((candidate) => (
               <li key={candidate.entityId} className="px-5 py-3.5">
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="font-heading text-[15.5px] leading-tight">{candidate.name}</span>
-                  <span className="text-[11.5px] text-muted-foreground">{candidate.typeLabel}</span>
-                  <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium tnum text-primary-foreground">
-                    affinity {pct(candidate.affinity)}
-                  </span>
-                </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-muted-foreground">
-                  <span className="font-mono text-[10.5px] text-muted-foreground/70">{candidate.entityId}</span>
-                  {candidate.drivers && candidate.drivers.length ? (
-                    <span>
-                      linked to{' '}
-                      {candidate.drivers
-                        .map((d) => `${d.seed}${typeof d.score === 'number' ? ` (${d.score.toFixed(2)})` : ''}`)
-                        .join(', ')}
-                    </span>
-                  ) : null}
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedCandidateIds.includes(candidate.entityId)}
+                    onChange={(event) => {
+                      const next = event.target.checked
+                        ? [...selectedCandidateIds, candidate.entityId]
+                        : selectedCandidateIds.filter((id) => id !== candidate.entityId);
+                      onSelectionChange(next);
+                      onTeacherConfirmedChange(false);
+                    }}
+                    aria-label={`Select ${candidate.name} for teacher-reviewed use`}
+                    className="mt-1 h-4 w-4 shrink-0 accent-current"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                      <span className="font-heading text-[15.5px] leading-tight">{candidate.name}</span>
+                      <span className="text-[11.5px] text-muted-foreground">{candidate.typeLabel}</span>
+                      <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium tnum text-primary-foreground">
+                        affinity {pct(candidate.affinity)}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-muted-foreground">
+                      <span className="font-mono text-[10.5px] text-muted-foreground/70">{candidate.entityId}</span>
+                      {candidate.drivers && candidate.drivers.length ? (
+                        <span>
+                          linked to{' '}
+                          {candidate.drivers
+                            .map((d) => `${d.seed}${typeof d.score === 'number' ? ` (${d.score.toFixed(2)})` : ''}`)
+                            .join(', ')}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
               </li>
             ))}
@@ -217,6 +245,28 @@ export default function EvidencePanel({ data, busy, onContinue, onDemo, onRetry,
         </p>
       ) : null}
 
+      {live ? (
+        <section className="rounded-xl border border-accent/35 bg-accent/8 p-4">
+          <label className="flex items-start gap-2.5 text-[12.5px] leading-relaxed text-foreground/90">
+            <input
+              type="checkbox"
+              checked={teacherConfirmed}
+              disabled={selectedCandidateIds.length === 0}
+              onChange={(event) => onTeacherConfirmedChange(event.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-current"
+            />
+            <span>
+              I have independently checked the selected title(s), confirmed they are genuinely relevant to this lesson objective, and verified their suitability for this class. Qloo affinity alone does not establish any of this.
+            </span>
+          </label>
+          <p className="mt-2 text-[11.5px] text-muted-foreground">
+            {selectedCandidateIds.length
+              ? `${selectedCandidateIds.length} candidate(s) selected. Only these reviewed items can reach lesson generation.`
+              : 'Select one or more candidates above, or use your original anchor without Qloo recommendations.'}
+          </p>
+        </section>
+      ) : null}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"
@@ -225,21 +275,33 @@ export default function EvidencePanel({ data, busy, onContinue, onDemo, onRetry,
         >
           Edit the brief
         </button>
-        <button
-          type="button"
-          onClick={onContinue}
-          disabled={busy || (!live && !demo && !curriculum)}
-          className={cn(
-            'inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-[13.5px] font-medium transition-all',
-            busy || (!live && !demo && !curriculum)
-              ? 'cursor-not-allowed bg-muted text-muted-foreground'
-              : 'bg-primary text-primary-foreground hover:opacity-92'
-          )}
-        >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          {busy ? 'Drafting lesson…' : curriculum ? 'Build curriculum-only lesson' : demo ? 'Build lesson with my references' : 'Build the Qloo-informed lesson'}
-          {!busy ? <ArrowRight className="h-4 w-4" /> : null}
-        </button>
+        <div className="flex flex-col gap-2 sm:items-end">
+          <button
+            type="button"
+            onClick={onContinue}
+            disabled={busy || (!live && !demo && !curriculum) || (live && (!selectedCandidateIds.length || !teacherConfirmed))}
+            className={cn(
+              'inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-[13.5px] font-medium transition-all',
+              busy || (!live && !demo && !curriculum) || (live && (!selectedCandidateIds.length || !teacherConfirmed))
+                ? 'cursor-not-allowed bg-muted text-muted-foreground'
+                : 'bg-primary text-primary-foreground hover:opacity-92'
+            )}
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {busy ? 'Drafting lesson…' : curriculum ? 'Build curriculum-only lesson' : demo ? 'Build lesson with my references' : 'Build lesson from reviewed Qloo results'}
+            {!busy ? <ArrowRight className="h-4 w-4" /> : null}
+          </button>
+          {live ? (
+            <button
+              type="button"
+              onClick={onDemo}
+              disabled={busy}
+              className="text-[11.5px] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Ignore recommendations and build from my original anchor(s)
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   );
