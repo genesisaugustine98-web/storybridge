@@ -33,7 +33,9 @@ export default function BriefForm({ brief, onChange, onLoadExample, onSubmit, bu
         : [...brief.materials, m],
     });
 
-  const ready = brief.objective.trim().length >= 8;
+  // Short topics such as "noun" are valid inputs; the form asks for a topic,
+  // not a minimum-length essay. Only an empty objective should block submission.
+  const ready = brief.objective.trim().length > 0;
 
   return (
     <div className="card-soft overflow-hidden">
@@ -53,7 +55,7 @@ export default function BriefForm({ brief, onChange, onLoadExample, onSubmit, bu
           </div>
         </Field>
 
-        <Field label="Objective or topic" hint="One objective only — this keeps the lesson practical">
+        <Field label="Objective or topic" hint="Short topics such as “noun” are accepted; a learning action makes the lesson more focused.">
           <Textarea
             value={brief.objective}
             onChange={(e) => set({ objective: e.target.value })}
@@ -95,7 +97,7 @@ export default function BriefForm({ brief, onChange, onLoadExample, onSubmit, bu
 
         <Field
           label="Cultural anchors"
-          hint="Optional. A film, book, artist, genre, sport or place you choose yourself."
+          hint="Optional. Enter a film, book, artist, genre, sport or place, choose its kind, then press Add. Only added references are sent to Qloo."
         >
           <AnchorEditor anchors={brief.anchors} onChange={(anchors) => set({ anchors })} />
         </Field>
