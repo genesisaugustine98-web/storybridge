@@ -56,11 +56,12 @@ export default function LessonHeader({ lesson, brief, mode, validation, draftLab
         </p>
       </div>
 
-      {validation && validation.removed && validation.removed.length ? (
+      {validation && validation.note ? (
         <div className="flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
           <p className="text-[12px] leading-relaxed text-muted-foreground">
-            {validation.note} Removed: {validation.removed.join(', ')}.
+            {validation.note}
+            {validation.removed && validation.removed.length ? ` Removed: ${validation.removed.join(', ')}.` : ''}
           </p>
         </div>
       ) : null}
