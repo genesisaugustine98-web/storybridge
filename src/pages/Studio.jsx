@@ -67,8 +67,24 @@ export default function Studio() {
   };
 
   const checkEvidence = async () => {
-    setBusy('qloo');
     setError('');
+    setLesson(null);
+
+    if (!brief.anchors.length) {
+      setDemo(false);
+      setQloo({
+        mode: 'curriculum',
+        detail: 'No cultural anchors were added. You can build a curriculum-only lesson now, or return to add references and request Qloo recommendations.',
+        anchors: [],
+        candidates: [],
+        calls: [],
+        endpoints: [],
+      });
+      advance(2);
+      return;
+    }
+
+    setBusy('qloo');
     try {
       const res = await base44.functions.invoke('qlooEvidence', { anchors: brief.anchors });
       const data = res.data || {};
@@ -118,7 +134,9 @@ export default function Studio() {
     try {
       const evidence = demo
         ? { mode: 'demo', anchors: qloo ? qloo.anchors : brief.anchors, candidates: [] }
-        : { mode: 'qloo', anchors: qloo ? qloo.anchors : [], candidates: qloo ? qloo.candidates : [] };
+        : qloo && qloo.mode === 'curriculum'
+          ? { mode: 'curriculum', anchors: [], candidates: [] }
+          : { mode: 'qloo', anchors: qloo ? qloo.anchors : [], candidates: qloo ? qloo.candidates : [] };
 
       const res = await base44.functions.invoke('generateLesson', {
         brief,
@@ -253,11 +271,12 @@ export default function Studio() {
                 <header className="rise-in">
                   <p className="label-caps text-accent">Step four · Compare</p>
                   <h1 className="mt-3 font-heading text-[30px] leading-[1.1] sm:text-[36px]">
-                    {lesson.mode === 'demo' ? 'Teacher anchors vs curriculum only' : 'Qloo-informed vs curriculum only'}
+                    {lesson.mode === 'demo' ? 'Teacher references vs curriculum only' : lesson.mode === 'curriculum' ? 'Curriculum-only lesson' : 'Qloo-informed vs curriculum only'}
                   </h1>
                   <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-muted-foreground">
-                    The same objective, drafted twice: once with no cultural references at all, once with the
-                    culture step applied.
+                    {lesson.mode === 'curriculum'
+                      ? 'No cultural anchors were supplied, so this run contains one curriculum-only draft and makes no Qloo recommendation claims.'
+                      : 'The same objective, drafted twice: once with no cultural references at all, once with the culture step applied.'}
                   </p>
                 </header>
                 <ComparePanel lesson={lesson} onBack={() => go(3)} />
