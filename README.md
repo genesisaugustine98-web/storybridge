@@ -33,7 +33,7 @@ Teachers are told, in the product, that every suggestion is a draft and must be 
 | `base44/shared/qloo.ts` | Qloo HTTP client, kind→entity-type map, parsing helpers |
 | `base44/shared/lesson.ts` | JSON schemas, prompts, normalisation and the example-grounding/validation step |
 
-There is **no database and no stored lesson**: no pupil records, no accounts, no saved taste profiles.
+StoryBridge uses Base44 teacher accounts (email/password or configured OAuth). It does not intentionally store pupil records, lesson history or saved taste profiles. Generated lessons remain in the browser session unless a teacher exports or prints them. Base44 still processes teacher account and authentication data; review its app-level retention and privacy settings before deployment.
 
 ---
 
@@ -113,12 +113,14 @@ The comparison summary is labelled as the model's reasoning, not as API output.
 
 ---
 
-## Privacy
+## Privacy and access
 
-- No pupil names, accounts or taste profiles anywhere.
-- Cultural anchors are chosen by the teacher and describe culture, not children.
-- Lessons are not persisted server-side; they live in the browser for the session, and the printable handout is the
-  only artefact the teacher keeps.
+- Teachers authenticate through Base44; both backend functions verify the request's teacher account before using service-role model calls or the Qloo key.
+- No pupil names, pupil accounts or saved taste profiles are requested by the lesson workflow.
+- Cultural anchors are chosen by the teacher and describe teaching materials or cultural references, not pupils.
+- Lessons are not intentionally persisted by StoryBridge; they live in the browser for the session, and the printable handout is the only artefact the teacher keeps.
+- Base44 still processes teacher account and authentication data. The platform's account retention, logs and backups are separate from StoryBridge lesson storage.
+- Do not enter identifiable pupil information or sensitive student records.
 
 ---
 
@@ -188,3 +190,11 @@ Guidance for anyone reusing this:
 - Lesson text generated for a teacher is theirs to use and adapt in class.
 - Fonts are Fraunces and Inter, served by Google Fonts under the SIL Open Font Licence.
 - If you add images or datasets, record their licence in a `NOTICE` file.
+
+## Project governance and readiness
+
+- [Project readiness and evidence](docs/PROJECT_READINESS.md)
+- [Data and privacy](docs/DATA_AND_PRIVACY.md)
+- [Cost and quota model](docs/COST_MODEL.md)
+
+These notes distinguish implemented controls from work that still needs external verification or pilot evidence.
