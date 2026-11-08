@@ -190,3 +190,11 @@ Guidance for anyone reusing this:
 - Lesson text generated for a teacher is theirs to use and adapt in class.
 - Fonts are Fraunces and Inter, served by Google Fonts under the SIL Open Font Licence.
 - If you add images or datasets, record their licence in a `NOTICE` file.
+
+## Project governance and readiness
+
+- [Project readiness and evidence](docs/PROJECT_READINESS.md)
+- [Data and privacy](docs/DATA_AND_PRIVACY.md)
+- [Cost and quota model](docs/COST_MODEL.md)
+
+These notes distinguish implemented controls from work that still needs external verification or pilot evidence.
