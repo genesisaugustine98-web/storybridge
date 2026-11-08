@@ -16,6 +16,10 @@ StoryBridge creates teacher-reviewable Nigerian secondary-school lessons from on
 - Curriculum-only and teacher-reference demo paths when Qloo is unavailable.
 - Backend authentication checks added to both generation and Qloo evidence functions in this branch.
 
+## Validation note
+
+The repository's existing `typecheck` script currently reports broad type errors in legacy JSX pages and generated UI component declarations (including Register, ResetPassword and Studio). Lint passes in the PR run; the validation workflow uses lint plus a production build and does not pretend that the typecheck is clean. Repairing the legacy component typings remains a separate technical-debt task.
+
 ## Not established
 
 - No independent teacher/user count, repeat-use data or school deployment is claimed.
