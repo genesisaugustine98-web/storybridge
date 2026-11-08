@@ -65,6 +65,17 @@ function cleanEvidence(input) {
 
 export default async function (req) {
   try {
+    const base44 = createClientFromRequest(req);
+    let currentUser;
+    try {
+      currentUser = await base44.auth.me();
+    } catch {
+      return Response.json({ error: 'Authentication required.' }, { status: 401 });
+    }
+    if (!currentUser || currentUser.disabled) {
+      return Response.json({ error: 'An active teacher account is required.' }, { status: 403 });
+    }
+
     const payload = await req.json().catch(() => ({}));
     const brief = cleanBrief(payload.brief);
     const evidence = cleanEvidence(payload.evidence);
@@ -83,8 +94,6 @@ export default async function (req) {
     if (!demo && !curriculumOnly && (!qlooApproved || !evidence.candidates.length)) {
       return Response.json({ error: 'Qloo results must be explicitly selected and confirmed by the teacher before they can be used in a lesson. Return to the evidence screen and review your selections, or build from your original references without Qloo.' }, { status: 400 });
     }
-
-    const base44 = createClientFromRequest(req);
 
     const informedText = demo
       ? demoPrompt(brief, anchors)
