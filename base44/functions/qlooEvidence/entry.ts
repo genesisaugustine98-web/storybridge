@@ -1,4 +1,5 @@
 import { secrets } from 'base44:runtime';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
 import { EXAMPLE_TYPES, KIND_TYPES, MAX_ANCHORS, TAG_TAKE, extractDrivers, matchesAnchor, pickEntity, pickTag, qlooGet, round, significantTokens, tagRank, typeLabel } from '../../shared/qloo.ts';
 
 const ENDPOINTS = [
@@ -191,6 +192,17 @@ function unresolvedNote(anchor, rejected) {
 
 export default async function (req) {
   try {
+    const base44 = createClientFromRequest(req);
+    let currentUser;
+    try {
+      currentUser = await base44.auth.me();
+    } catch {
+      return Response.json({ error: 'Authentication required.' }, { status: 401 });
+    }
+    if (!currentUser || currentUser.disabled) {
+      return Response.json({ error: 'An active teacher account is required.' }, { status: 403 });
+    }
+
     const payload = await req.json().catch(() => ({}));
     const anchors = cleanAnchors(payload.anchors);
     const probe = payload.probe === true;
